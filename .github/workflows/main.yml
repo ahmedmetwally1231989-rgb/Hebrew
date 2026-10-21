@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>تطبيق حفظ الكلمات العبرية والإشعارات</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Cairo for Arabic, Rubik for Hebrew) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&family=Rubik:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        },
+                        hebrew: '#2563eb'
+                    },
+                    fontFamily: {
+                        sans: ['Cairo', 'sans-serif'],
+                        hebrew: ['Rubik', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .font-hebrew {
+            font-family: 'Rubik', sans-serif;
+        }
+        
+        /* 3D Flip Card Animation */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+
+        /* Glassmorphism Styles */
+        .glass {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .glass-dark {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.4);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.7);
+        }
+
+        /* Lock Screen Digital Clock Font */
+        @font-face {
+            font-family: 'ClockFont';
+            src: local('Helvetica Neue'), local('Arial');
+        }
+        .lock-clock {
+            font-weight: 200;
+            letter-spacing: -2px;
+        }
+
+        /* Pulse glow animation for notification badge */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(99, 102, 241, 0.5); }
+            50% { box-shadow: 0 0 25px rgba(99, 102, 241, 0.8); }
+        }
+        .animate-glow {
+            animation: pulse-glow 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 h-full flex flex-col transition-colors duration-200">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800 px-4 py-3">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+                    <i class="fa-solid font-hebrew text-xl font-bold">ע</i>
+                </div>
+                <div>
+                    <h1 class="text-base font-bold leading-tight">حافظ العبرية</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">الإشعارات والتكرار الذكي</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <!-- Theme Toggle Button -->
+                <button id="themeToggle" class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition" title="تبديل الوضع">
+                    <i class="fa-solid fa-moon dark:hidden"></i>
+                    <i class="fa-solid fa-sun hidden dark:block text-amber-400"></i>
+                </button>
+                <!-- Native Notification Permission Request Button -->
+                <button id="nativeNotifyBtn" onclick="requestNotificationPermission()" class="px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-xs font-semibold flex items-center gap-1.5 hover:bg-indigo-100 transition">
+                    <i class="fa-regular fa-bell"></i>
+                    <span id="notifyBtnText">تفعيل الإشعارات</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container (Mobile Phone Outer Frame Simulator on Desktop) -->
+    <main class="flex-1 max-w-md w-full mx-auto p-4 pb-24 overflow-y-auto">
+        
+        <!-- Tab 1: Lock Screen & Notification Simulator -->
+        <section id="tab-lockscreen" class="tab-content space-y-4">
+            <!-- Info Box explaining the feature -->
+            <div class="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-200 dark:border-indigo-800/50 rounded-2xl p-4 text-xs leading-relaxed text-slate-700 dark:text-slate-300 flex gap-3 items-start">
+                <i class="fa-solid fa-circle-info text-indigo-500 text-lg shrink-0 mt-0.5"></i>
+                <div>
+                    <strong class="block font-bold text-indigo-600 dark:text-indigo-400 mb-1">محاكي شاشة القفل والإشعارات:</strong>
+                    هذه الشاشة تحاكي تليفونك وهو مقفول. بيظهرلك إشعار بالكلمة العبرية فقط، وتقدر تضغط على الزرار لجلب المعنى وتحديد مدى حفظك لها.
+                </div>
+            </div>
+
+            <!-- Controls Panel for Notification Simulator -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-clock text-indigo-500"></i> معدل إرسال الإشعارات:
+                    </span>
+                    <select id="timerInterval" class="bg-slate-100 dark:bg-slate-800 text-xs rounded-lg px-2.5 py-1.5 border border-slate-300 dark:border-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="5">كل 5 ثواني (سريع للتجربة)</option>
+                        <option value="10">كل 10 ثواني</option>
+                        <option value="30">كل 30 ثانية</option>
+                        <option value="900">كل 15 دقيقة</option>
+                        <option value="1800">كل 30 دقيقة</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-2">
+                    <button id="toggleTimerBtn" onclick="toggleAutoNotification()" class="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-xs flex items-center justify-center gap-2 hover:bg-indigo-700 shadow-md shadow-indigo-500/20 active:scale-95 transition">
+                        <i class="fa-solid fa-play" id="timerIcon"></i>
+                        <span id="timerBtnText">تشغيل الإشعارات التلقائية</span>
+                    </button>
+                    <button onclick="triggerNextNotification()" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition">
+                        <i class="fa-solid fa-forward-step"></i> إشعار جديد
+                    </button>
+                </div>
+            </div>
+
+            <!-- Simulated Phone Frame -->
+            <div class="relative mx-auto w-full rounded-[40px] border-[8px] border-slate-800 dark:border-slate-700 bg-slate-900 shadow-2xl overflow-hidden min-h-[500px] flex flex-col justify-between p-4 text-white select-none">
+                
+                <!-- Phone Top Bar (Status bar) -->
+                <div class="flex justify-between items-center text-[10px] text-slate-300 px-2 pt-1 z-10">
+                    <span id="statusClock">12:00</span>
+                    <!-- Dynamic Camera Notch -->
+                    <div class="w-20 h-4 bg-slate-800 rounded-full flex items-center justify-center">
+                        <div class="w-2.5 h-2.5 rounded-full bg-slate-900 border border-slate-700"></div>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-signal"></i>
+                        <i class="fa-solid fa-wifi"></i>
+                        <i class="fa-solid fa-battery-three-quarters text-xs"></i>
+                    </div>
+                </div>
+
+                <!-- Lock Screen Center Clock & Date -->
+                <div class="text-center my-6 z-10">
+                    <div id="lockTime" class="lock-clock text-6xl font-extralight tracking-tight text-slate-100">12:00</div>
+                    <div id="lockDate" class="text-xs font-medium text-indigo-200 mt-1">الأربعاء، 21 أكتوبر</div>
+                </div>
+
+                <!-- Simulated Interactive Notification Box -->
+                <div class="my-auto z-10 w-full">
+                    <div id="notificationCard" class="glass-dark rounded-3xl p-4 border border-white/20 shadow-2xl transition-all duration-300 hover:border-indigo-400/50">
+                        <!-- Notification Header -->
+                        <div class="flex items-center justify-between pb-3 border-b border-white/10 text-xs">
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-[10px] font-bold font-hebrew">
+                                    ע
+                                </div>
+                                <span class="font-bold text-slate-200">حافظ العبرية</span>
+                                <span class="text-[10px] text-slate-400">• الآن</span>
+                            </div>
+                            <i class="fa-solid fa-ellipsis text-slate-400 text-xs"></i>
+                        </div>
+
+                        <!-- Notification Body (Hebrew Word Display) -->
+                        <div class="py-4 text-center">
+                            <span class="text-xs text-indigo-300 font-semibold block mb-1">ما معنى هذه الكلمة بالعربي؟</span>
+                            <div id="simHebrewWord" class="font-hebrew text-3xl font-bold text-white tracking-wide py-1 drop-shadow-md">
+                                شالوم (שלום)
+                            </div>
+                            <div id="simTransliteration" class="text-xs text-slate-300 mt-1 font-light italic">
+                                [Shalom]
+                            </div>
+
+                            <!-- Hidden Arabic Meaning Toggle Area -->
+                            <div id="simMeaningArea" class="hidden mt-3 pt-3 border-t border-white/10 bg-indigo-950/40 rounded-xl p-3 text-center animate-fadeIn">
+                                <span class="text-[10px] text-indigo-300 block mb-0.5">المعنى بالعربية:</span>
+                                <span id="simArabicMeaning" class="text-xl font-bold text-emerald-400 block">سلام / أهلاً</span>
+                            </div>
+                        </div>
+
+                        <!-- Notification Interactive Buttons -->
+                        <div class="space-y-2 pt-1">
+                            <button id="revealBtn" onclick="toggleSimMeaning()" class="w-full py-2 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white font-semibold text-xs transition flex items-center justify-center gap-2 border border-indigo-400/30">
+                                <i class="fa-solid fa-eye text-xs"></i>
+                                <span id="revealBtnText">إظهار المعنى بالعربي</span>
+                            </button>
+
+                            <!-- Self Evaluation Rating Buttons -->
+                            <div id="evalButtons" class="hidden grid grid-cols-2 gap-2 pt-1">
+                                <button onclick="markWordResult(true)" class="py-2 rounded-xl bg-emerald-600/80 hover:bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 border border-emerald-400/30 transition">
+                                    <i class="fa-solid fa-check"></i> عرفتها
+                                </button>
+                                <button onclick="markWordResult(false)" class="py-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 border border-rose-400/30 transition">
+                                    <i class="fa-solid fa-xmark"></i> نسيتها
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phone Bottom Navigation / Swipe Indicator -->
+                <div class="text-center pt-2 pb-1 z-10">
+                    <div class="w-32 h-1 bg-slate-400/50 rounded-full mx-auto"></div>
+                </div>
+
+                <!-- Background Subtle Wallpaper Effect inside Phone -->
+                <div class="absolute inset-0 bg-gradient-to-b from-indigo-950 via-slate-900 to-slate-950 opacity-90 pointer-events-none"></div>
+                <div class="absolute -top-24 -right-24 w-60 h-60 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -bottom-24 -left-24 w-60 h-60 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
+            </div>
+        </section>
+
+        <!-- Tab 2: Flashcards Practice Mode -->
+        <section id="tab-flashcards" class="tab-content hidden space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-sm font-bold text-slate-700 dark:text-slate-300">مراجعة البطاقات التفكرية</h2>
+                <span id="flashcardCounter" class="text-xs px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold">
+                    1 / 10
+                </span>
+            </div>
+
+            <!-- 3D Flip Card Container -->
+            <div class="perspective-1000 w-full h-72">
+                <div id="flashcard" onclick="flipFlashcard()" class="relative w-full h-full duration-500 transform-style-3d cursor-pointer rounded-3xl shadow-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    
+                    <!-- Card Front (Hebrew Word) -->
+                    <div class="absolute inset-0 w-full h-full backface-hidden rounded-3xl p-6 flex flex-col justify-between items-center text-center">
+                        <div class="w-full flex justify-between items-center text-slate-400 text-xs">
+                            <span class="flex items-center gap-1"><i class="fa-solid fa-hand-pointer"></i> اضغط للقلب</span>
+                            <button onclick="event.stopPropagation(); speakHebrew();" class="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 transition" title="استمع للنطق">
+                                <i class="fa-solid fa-volume-high text-base"></i>
+                            </button>
+                        </div>
+
+                        <div>
+                            <div id="cardHebrew" class="font-hebrew text-4xl font-bold text-slate-900 dark:text-white mb-2">
+                                שלום
+                            </div>
+                            <div id="cardTransliteration" class="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
+                                [Shalom]
+                            </div>
+                        </div>
+
+                        <div class="text-xs text-slate-400 font-medium">
+                            انقر لرؤية المعنى بالعربي
+                        </div>
+                    </div>
+
+                    <!-- Card Back (Arabic Meaning) -->
+                    <div class="absolute inset-0 w-full h-full backface-hidden rotate-y-180 rounded-3xl p-6 flex flex-col justify-between items-center text-center bg-gradient-to-b from-indigo-500/5 to-transparent">
+                        <div class="w-full flex justify-between items-center text-slate-400 text-xs">
+                            <span class="text-indigo-600 dark:text-indigo-400 font-bold">المعنى بالعربية</span>
+                            <button onclick="event.stopPropagation(); speakHebrew();" class="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 transition">
+                                <i class="fa-solid fa-volume-high text-base"></i>
+                            </button>
+                        </div>
+
+                        <div>
+                            <div id="cardArabic" class="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-2">
+                                سلام / أهلاً
+                            </div>
+                            <div id="cardCategory" class="inline-block text-xs bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full font-semibold">
+                                التحيات والترحيب
+                            </div>
+                        </div>
+
+                        <div class="text-xs text-slate-400">
+                            اختر إجابتك لتحديد التقدم
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flashcard Next / Previous / Evaluation Controls -->
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button onclick="flashcardAnswer(false)" class="py-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 font-bold text-sm flex items-center justify-center gap-2 hover:bg-rose-100 transition">
+                    <i class="fa-solid fa-thumbs-down"></i> أحتاج مراجعتها
+                </button>
+                <button onclick="flashcardAnswer(true)" class="py-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50 font-bold text-sm flex items-center justify-center gap-2 hover:bg-emerald-100 transition">
+                    <i class="fa-solid fa-thumbs-up"></i> حفظتها جيداً
+                </button>
+            </div>
+            
+            <div class="flex justify-between items-center px-1">
+                <button onclick="prevFlashcard()" class="text-xs font-semibold text-slate-500 hover:text-indigo-600 flex items-center gap-1 py-1">
+                    <i class="fa-solid fa-arrow-right"></i> الكلمة السابقة
+                </button>
+                <button onclick="nextFlashcard()" class="text-xs font-semibold text-slate-500 hover:text-indigo-600 flex items-center gap-1 py-1">
+                    الكلمة التالية <i class="fa-solid fa-arrow-left"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Tab 3: Dictionary & Custom File Import -->
+        <section id="tab-words" class="tab-content hidden space-y-4">
+            
+            <!-- File Uploader & Custom Word Addition Box -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 space-y-3">
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <i class="fa-solid fa-file-import text-indigo-500"></i> استيراد وتخصيص الكلمات
+                </h3>
+                
+                <!-- File Import Form -->
+                <div class="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center hover:border-indigo-500 transition relative">
+                    <input type="file" id="fileInput" accept=".csv, .txt, .json" onchange="handleFileUpload(event)" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer">
+                    <i class="fa-solid fa-cloud-arrow-up text-2xl text-indigo-500 mb-1"></i>
+                    <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">ارفع ملفك الخاص (CSV أو TXT)</p>
+                    <p class="text-[10px] text-slate-400 mt-0.5">الصيغة: الكلمة العبرية, المعنى بالعربي, النطق</p>
+                </div>
+
+                <!-- Manual Word Quick Add Form -->
+                <form id="addWordForm" onsubmit="addNewWord(event)" class="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" id="newHebrew" placeholder="الكلمة بالعبري (مثال: תודה)" required class="w-full text-xs p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-hebrew">
+                        <input type="text" id="newArabic" placeholder="المعنى بالعربي (مثال: شكراً)" required class="w-full text-xs p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="newTrans" placeholder="النطق/النظير (اختياري: Toda)" class="flex-1 text-xs p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <button type="submit" class="px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition">
+                            <i class="fa-solid fa-plus"></i> إضافة
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Vocabulary Search & List Header -->
+            <div class="flex items-center justify-between gap-2">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute right-3 top-3 text-slate-400 text-xs"></i>
+                    <input type="text" id="searchInput" oninput="renderWordList()" placeholder="بحث في الكلمات..." class="w-full pr-8 pl-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <button onclick="resetDefaultWords()" class="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-300 transition shrink-0" title="استعادة القائمة الافتراضية">
+                    <i class="fa-solid fa-rotate-right"></i> القائمة الأصلية
+                </button>
+            </div>
+
+            <!-- Dynamic Word List Cards -->
+            <div id="wordListContainer" class="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                <!-- Javascript will render word cards here -->
+            </div>
+        </section>
+
+        <!-- Tab 4: User Progress & Statistics -->
+        <section id="tab-stats" class="tab-content hidden space-y-4">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-indigo-500"></i> إحصائيات حفظ الكلمات
+                </h3>
+
+                <!-- Summary Badges Grid -->
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-indigo-50 dark:bg-indigo-950/50 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900">
+                        <span id="statTotal" class="block text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">0</span>
+                        <span class="text-[10px] text-slate-500 font-semibold">إجمالي الكلمات</span>
+                    </div>
+                    <div class="bg-emerald-50 dark:bg-emerald-950/50 p-3 rounded-xl border border-emerald-100 dark:border-emerald-900">
+                        <span id="statMastered" class="block text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">0</span>
+                        <span class="text-[10px] text-slate-500 font-semibold">كلمات أتقنتها</span>
+                    </div>
+                    <div class="bg-amber-50 dark:bg-amber-950/50 p-3 rounded-xl border border-amber-100 dark:border-amber-900">
+                        <span id="statLearning" class="block text-2xl font-extrabold text-amber-600 dark:text-amber-400">0</span>
+                        <span class="text-[10px] text-slate-500 font-semibold">قيد التكرار</span>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div>
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-slate-600 dark:text-slate-400">نسبة الحفظ الإجمالية</span>
+                        <span id="statPercent" class="text-indigo-600 dark:text-indigo-400 font-bold">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden">
+                        <div id="statProgressBar" class="bg-gradient-to-r from-indigo-500 to-emerald-500 h-full w-0 transition-all duration-500"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Spaced Repetition Info Card -->
+            <div class="bg-indigo-600 text-white rounded-2xl p-4 shadow-md space-y-2">
+                <h4 class="font-bold text-xs flex items-center gap-1.5">
+                    <i class="fa-solid fa-brain"></i> كيف يعمل هذا النظام؟
+                </h4>
+                <p class="text-xs text-indigo-100 leading-relaxed">
+                    يعتمد التطبيق على طريقة التكرار المتباعد (Spaced Repetition). الكلمات التي تضغط فيها على "نسيتها" أو "أحتاج مراجعتها" ستظهر لك بمعدل إشعارات أسرع حتى تتذكرها تماماً.
+                </p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-4 py-2">
+        <div class="max-w-md mx-auto flex justify-around items-center">
+            <button onclick="switchTab('lockscreen')" id="nav-lockscreen" class="nav-btn flex flex-col items-center gap-1 text-indigo-600 dark:text-indigo-400 transition">
+                <i class="fa-solid fa-mobile-screen-button text-lg"></i>
+                <span class="text-[10px] font-bold">المحاكي</span>
+            </button>
+            
+            <button onclick="switchTab('flashcards')" id="nav-flashcards" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-indigo-500 transition">
+                <i class="fa-solid fa-layer-group text-lg"></i>
+                <span class="text-[10px] font-bold">البطاقات</span>
+            </button>
+
+            <button onclick="switchTab('words')" id="nav-words" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-indigo-500 transition">
+                <i class="fa-solid fa-book text-lg"></i>
+                <span class="text-[10px] font-bold">الكلمات</span>
+            </button>
+
+            <button onclick="switchTab('stats')" id="nav-stats" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-indigo-500 transition">
+                <i class="fa-solid fa-chart-simple text-lg"></i>
+                <span class="text-[10px] font-bold">التقدم</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Custom Toast Message Notification -->
+    <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 border border-slate-700 opacity-0 pointer-events-none transition-all duration-300">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMessage">تم الحفظ بنجاح</span>
+    </div>
+
+    <!-- Application JavaScript Logic -->
+    <script>
+        // --- 1. Default Hebrew-Arabic Vocabulary Database ---
+        const DEFAULT_VOCABULARY = [
+            { id: 1, hebrew: "שלום", arabic: "سلام / أهلاً / وداعاً", trans: "Shalom", category: "التحيات", learned: false, score: 0 },
+            { id: 2, hebrew: "תודה", arabic: "شكراً", trans: "Toda", category: "أساسيات", learned: false, score: 0 },
+            { id: 3, hebrew: "בבקשה", arabic: "عفواً / من فضلك", trans: "Bevakasha", category: "أساسيات", learned: false, score: 0 },
+            { id: 4, hebrew: "בוקר טוב", arabic: "صباح الخير", trans: "Boker Tov", category: "التحيات", learned: false, score: 0 },
+            { id: 5, hebrew: "ערב טוב", arabic: "مساء الخير", trans: "Erev Tov", category: "التحيات", learned: false, score: 0 },
+            { id: 6, hebrew: "כן", arabic: "نعم", trans: "Ken", category: "أساسيات", learned: false, score: 0 },
+            { id: 7, hebrew: "לא", arabic: "لا", trans: "Lo", category: "أساسيات", learned: false, score: 0 },
+            { id: 8, hebrew: "מה שלומך?", arabic: "كيف حالك؟", trans: "Ma Shlomkha?", category: "محادثة", learned: false, score: 0 },
+            { id: 9, hebrew: "סליחה", arabic: "عذراً / آسف", trans: "Slikha", category: "أساسيات", learned: false, score: 0 },
+            { id: 10, hebrew: "להתראות", arabic: "إلى اللقاء", trans: "Lehitraot", category: "التحيات", learned: false, score: 0 },
+            { id: 11, hebrew: "אני", arabic: "أنا", trans: "Ani", category: "الضمائر", learned: false, score: 0 },
+            { id: 12, hebrew: "אתה", arabic: "أنتَ", trans: "Ata", category: "الضمائر", learned: false, score: 0 },
+            { id: 13, hebrew: "בית", arabic: "بيت / منزل", trans: "Bayit", category: "أسماء", learned: false, score: 0 },
+            { id: 14, hebrew: "ספר", arabic: "كتاب", trans: "Sefer", category: "أسماء", learned: false, score: 0 },
+            { id: 15, hebrew: "מים", arabic: "ماء", trans: "Mayim", category: "أسماء", learned: false, score: 0 }
+        ];
+
+        // Global State Variables
+        let vocabulary = [];
+        let currentWordIndex = 0;
+        let currentFlashcardIndex = 0;
+        let isAutoNotificationRunning = false;
+        let notificationTimerId = null;
+        let nativeNotificationsAllowed = false;
+
+        // Initialize App on DOM Content Loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            loadVocabulary();
+            initTheme();
+            updateLockScreenClock();
+            setInterval(updateLockScreenClock, 1000);
+            renderCurrentNotificationWord();
+            renderFlashcardWord();
+            renderWordList();
+            updateStats();
+            checkNativeNotificationSupport();
+        });
+
+        // --- 2. LocalStorage & Data Handling ---
+        function loadVocabulary() {
+            const stored = localStorage.getItem('hebrew_vocab_data');
+            if (stored) {
+                try {
+                    vocabulary = JSON.parse(stored);
+                } catch (e) {
+                    vocabulary = [...DEFAULT_VOCABULARY];
+                }
+            } else {
+                vocabulary = [...DEFAULT_VOCABULARY];
+                saveVocabulary();
+            }
+        }
+
+        function saveVocabulary() {
+            localStorage.setItem('hebrew_vocab_data', JSON.stringify(vocabulary));
+            updateStats();
+        }
+
+        function resetDefaultWords() {
+            if (confirm("هل أنت تأكد من استعادة القائمة الافتراضية؟ سيتم مسح أي كلمات جديدة قمت بإضافتها.")) {
+                vocabulary = [...DEFAULT_VOCABULARY];
+                saveVocabulary();
+                renderWordList();
+                renderCurrentNotificationWord();
+                renderFlashcardWord();
+                showToast("تمت استعادة القائمة الافتراضية");
+            }
+        }
+
+        // --- 3. UI Navigation & Tabs ---
+        function switchTab(tabId) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            
+            // Show target tab
+            const target = document.getElementById(`tab-${tabId}`);
+            if (target) target.classList.remove('hidden');
+
+            // Reset navigation button highlights
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-indigo-600', 'dark:text-indigo-400');
+                btn.classList.add('text-slate-400');
+            });
+
+            const activeNavBtn = document.getElementById(`nav-${tabId}`);
+            if (activeNavBtn) {
+                activeNavBtn.classList.remove('text-slate-400');
+                activeNavBtn.classList.add('text-indigo-600', 'dark:text-indigo-400');
+            }
+        }
+
+        // --- 4. Lock Screen Simulator Logic ---
+        function updateLockScreenClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const timeString = `${hours}:${minutes}`;
+
+            document.getElementById('lockTime').textContent = timeString;
+            document.getElementById('statusClock').textContent = timeString;
+
+            const options = { weekday: 'long', month: 'long', day: 'numeric' };
+            document.getElementById('lockDate').textContent = now.toLocaleDateString('ar-EG', options);
+        }
+
+        function renderCurrentNotificationWord() {
+            if (vocabulary.length === 0) return;
+            
+            const item = vocabulary[currentWordIndex];
+            document.getElementById('simHebrewWord').textContent = item.hebrew;
+            document.getElementById('simTransliteration').textContent = item.trans ? `[${item.trans}]` : '';
+            document.getElementById('simArabicMeaning').textContent = item.arabic;
+
+            // Hide meaning initially
+            document.getElementById('simMeaningArea').classList.add('hidden');
+            document.getElementById('evalButtons').classList.add('hidden');
+            document.getElementById('revealBtn').classList.remove('hidden');
+            document.getElementById('revealBtnText').textContent = "إظهار المعنى بالعربي";
+        }
+
+        function toggleSimMeaning() {
+            const meaningArea = document.getElementById('simMeaningArea');
+            const evalButtons = document.getElementById('evalButtons');
+            const revealBtn = document.getElementById('revealBtn');
+
+            if (meaningArea.classList.contains('hidden')) {
+                meaningArea.classList.remove('hidden');
+                evalButtons.classList.remove('hidden');
+                revealBtn.classList.add('hidden');
+                
+                // Speak word using TTS if available
+                speakText(vocabulary[currentWordIndex].hebrew);
+            }
+        }
+
+        function triggerNextNotification() {
+            if (vocabulary.length === 0) return;
+            
+            // Choose word based on priority (words with lower scores appear more)
+            let unlearned = vocabulary.filter(w => !w.learned);
+            if (unlearned.length > 0) {
+                const randomItem = unlearned[Math.floor(Math.random() * unlearned.length)];
+                currentWordIndex = vocabulary.findIndex(w => w.id === randomItem.id);
+            } else {
+                currentWordIndex = (currentWordIndex + 1) % vocabulary.length;
+            }
+
+            renderCurrentNotificationWord();
+
+            // Trigger Browser Native Notification if allowed
+            sendNativeNotification(vocabulary[currentWordIndex]);
+        }
+
+        function markWordResult(known) {
+            if (vocabulary.length === 0) return;
+
+            const word = vocabulary[currentWordIndex];
+            if (known) {
+                word.score = (word.score || 0) + 1;
+                if (word.score >= 2) word.learned = true;
+                showToast("ممتاز! تم تسجيل حفظ الكلمة", "success");
+            } else {
+                word.score = Math.max(0, (word.score || 0) - 1);
+                word.learned = false;
+                showToast("سيتم تكرار الكلمة قريباً", "info");
+            }
+
+            saveVocabulary();
+            triggerNextNotification();
+        }
+
+        function toggleAutoNotification() {
+            const btnText = document.getElementById('timerBtnText');
+            const icon = document.getElementById('timerIcon');
+
+            if (isAutoNotificationRunning) {
+                clearInterval(notificationTimerId);
+                isAutoNotificationRunning = false;
+                btnText.textContent = "تشغيل الإشعارات التلقائية";
+                icon.className = "fa-solid fa-play";
+                showToast("تم إيقاف الإشعارات التلقائية");
+            } else {
+                const seconds = parseInt(document.getElementById('timerInterval').value) || 5;
+                isAutoNotificationRunning = true;
+                btnText.textContent = "إيقاف الإشعارات المؤقتة";
+                icon.className = "fa-solid fa-pause";
+                showToast(`تم تفعيل الإشعارات كل ${seconds} ثانية`);
+
+                // Fire initial notification immediately
+                triggerNextNotification();
+
+                notificationTimerId = setInterval(() => {
+                    triggerNextNotification();
+                }, seconds * 1000);
+            }
+        }
+
+        // --- 5. Browser Native Notification API ---
+        function checkNativeNotificationSupport() {
+            if ("Notification" in window) {
+                if (Notification.permission === "granted") {
+                    nativeNotificationsAllowed = true;
+                    document.getElementById('notifyBtnText').textContent = "الإشعارات مفعلة";
+                }
+            } else {
+                document.getElementById('nativeNotifyBtn').style.display = 'none';
+            }
+        }
+
+        function requestNotificationPermission() {
+            if (!("Notification" in window)) {
+                alert("متصفحك لا يدعم إشعارات النظام.");
+                return;
+            }
+
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    nativeNotificationsAllowed = true;
+                    document.getElementById('notifyBtnText').textContent = "الإشعارات مفعلة";
+                    showToast("تم تفعيل إشعارات المتصفح بنجاح!");
+                } else {
+                    showToast("لم يتم منح الإذن للإشعارات");
+                }
+            });
+        }
+
+        function sendNativeNotification(wordObj) {
+            if (nativeNotificationsAllowed && Notification.permission === "granted") {
+                const options = {
+                    body: `الكلمة بالعبري: ${wordObj.hebrew} ${wordObj.trans ? '[' + wordObj.trans + ']' : ''}\n(افتح التطبيق لمعرفة المعنى بالعربي)`,
+                    icon: 'https://cdn-icons-png.flaticon.com/512/3233/3233010.png',
+                    dir: 'rtl'
+                };
+                new Notification("حافظ العبرية: كلمة جديدة", options);
+            }
+        }
+
+        // --- 6. Flashcards Mode Logic ---
+        function renderFlashcardWord() {
+            if (vocabulary.length === 0) return;
+
+            const item = vocabulary[currentFlashcardIndex];
+            document.getElementById('cardHebrew').textContent = item.hebrew;
+            document.getElementById('cardTransliteration').textContent = item.trans ? `[${item.trans}]` : '';
+            document.getElementById('cardArabic').textContent = item.arabic;
+            document.getElementById('cardCategory').textContent = item.category || 'عام';
+            
+            document.getElementById('flashcardCounter').textContent = `${currentFlashcardIndex + 1} / ${vocabulary.length}`;
+
+            // Ensure card front is shown
+            document.getElementById('flashcard').classList.remove('rotate-y-180');
+        }
+
+        function flipFlashcard() {
+            document.getElementById('flashcard').classList.toggle('rotate-y-180');
+        }
+
+        function nextFlashcard() {
+            if (vocabulary.length === 0) return;
+            currentFlashcardIndex = (currentFlashcardIndex + 1) % vocabulary.length;
+            renderFlashcardWord();
+        }
+
+        function prevFlashcard() {
+            if (vocabulary.length === 0) return;
+            currentFlashcardIndex = (currentFlashcardIndex - 1 + vocabulary.length) % vocabulary.length;
+            renderFlashcardWord();
+        }
+
+        function flashcardAnswer(known) {
+            const word = vocabulary[currentFlashcardIndex];
+            if (known) {
+                word.learned = true;
+                word.score = (word.score || 0) + 1;
+                showToast("تم تسجيل حفظ الكلمة!");
+            } else {
+                word.learned = false;
+                word.score = 0;
+            }
+            saveVocabulary();
+            nextFlashcard();
+        }
+
+        // Text To Speech Pronunciation (Hebrew)
+        function speakHebrew() {
+            if (vocabulary.length === 0) return;
+            speakText(vocabulary[currentFlashcardIndex].hebrew);
+        }
+
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'he-IL'; // Hebrew language code
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // --- 7. Vocabulary Manager & File Uploader ---
+        function renderWordList() {
+            const container = document.getElementById('wordListContainer');
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            
+            container.innerHTML = '';
+
+            const filtered = vocabulary.filter(w => 
+                w.hebrew.toLowerCase().includes(query) || 
+                w.arabic.toLowerCase().includes(query) ||
+                (w.trans && w.trans.toLowerCase().includes(query))
+            );
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-400 text-xs">
+                        لا توجد كلمات مطابقة للبحث
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-sm";
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <button onclick="speakText('${item.hebrew}')" class="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs shrink-0 hover:bg-indigo-100 transition">
+                            <i class="fa-solid fa-volume-high"></i>
+                        </button>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-hebrew font-bold text-slate-900 dark:text-white text-base">${item.hebrew}</span>
+                                ${item.trans ? `<span class="text-[10px] text-indigo-500 font-medium">[${item.trans}]</span>` : ''}
+                            </div>
+                            <div class="text-xs text-slate-600 dark:text-slate-400 font-semibold">${item.arabic}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${item.learned ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'}">
+                            ${item.learned ? 'محفوظة' : 'قيد المراجعة'}
+                        </span>
+                        <button onclick="deleteWord(${item.id})" class="text-slate-400 hover:text-rose-500 text-xs p-1">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function addNewWord(e) {
+            e.preventDefault();
+            const hebrew = document.getElementById('newHebrew').value.trim();
+            const arabic = document.getElementById('newArabic').value.trim();
+            const trans = document.getElementById('newTrans').value.trim();
+
+            if (!hebrew || !arabic) return;
+
+            const newWord = {
+                id: Date.now(),
+                hebrew,
+                arabic,
+                trans,
+                category: 'مخصص',
+                learned: false,
+                score: 0
+            };
+
+            vocabulary.unshift(newWord);
+            saveVocabulary();
+            renderWordList();
+
+            document.getElementById('addWordForm').reset();
+            showToast("تمت إضافة الكلمة بنجاح!");
+        }
+
+        function deleteWord(id) {
+            vocabulary = vocabulary.filter(w => w.id !== id);
+            saveVocabulary();
+            renderWordList();
+            showToast("تم حذف الكلمة");
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                parseUploadedFile(content);
+            };
+            reader.readAsText(file);
+        }
+
+        function parseUploadedFile(text) {
+            const lines = text.split('\n');
+            let addedCount = 0;
+
+            lines.forEach(line => {
+                if (!line.trim()) return;
+                // Support CSV comma, tab, or dash separated values
+                const parts = line.split(/[,;\t|-]/);
+                if (parts.length >= 2) {
+                    const hebrew = parts[0].trim();
+                    const arabic = parts[1].trim();
+                    const trans = parts[2] ? parts[2].trim() : '';
+
+                    if (hebrew && arabic) {
+                        vocabulary.push({
+                            id: Date.now() + Math.random(),
+                            hebrew,
+                            arabic,
+                            trans,
+                            category: 'مستورد',
+                            learned: false,
+                            score: 0
+                        });
+                        addedCount++;
+                    }
+                }
+            });
+
+            if (addedCount > 0) {
+                saveVocabulary();
+                renderWordList();
+                showToast(`تم استيراد ${addedCount} كلمة بنجاح!`);
+            } else {
+                showToast("تعذر قراءة الملف. تأكد من الصيغة الصحيحة", "error");
+            }
+        }
+
+        // --- 8. Statistics Calculator ---
+        function updateStats() {
+            const total = vocabulary.length;
+            const mastered = vocabulary.filter(w => w.learned).length;
+            const learning = total - mastered;
+            const percent = total > 0 ? Math.round((mastered / total) * 100) : 0;
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statMastered').textContent = mastered;
+            document.getElementById('statLearning').textContent = learning;
+            document.getElementById('statPercent').textContent = `${percent}%`;
+            document.getElementById('statProgressBar').style.width = `${percent}%`;
+        }
+
+        // --- 9. Theme & Utilities ---
+        function initTheme() {
+            const themeBtn = document.getElementById('themeToggle');
+            themeBtn.addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+            });
+        }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const messageEl = document.getElementById('toastMessage');
+            const iconEl = document.getElementById('toastIcon');
+
+            messageEl.textContent = msg;
+
+            if (type === 'error') {
+                iconEl.className = "fa-solid fa-circle-xmark text-rose-400";
+            } else if (type === 'info') {
+                iconEl.className = "fa-solid fa-circle-info text-blue-400";
+            } else {
+                iconEl.className = "fa-solid fa-circle-check text-emerald-400";
+            }
+
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
